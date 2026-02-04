@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Для тебя 💌</title>
+
+<!-- Open Graph / Telegram preview -->
+<meta property="og:title" content="Будешь моей валентинкой? 💌">
+<meta property="og:description" content="Нажми 'Да' — и получишь поздравление :)">
+<meta property="og:image" content="/preview.png">
+<meta property="og:type" content="website">
+<meta name="twitter:card" content="summary_large_image">
+
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+
+<style>
+  :root{ --bg1:#ffd1dc; --bg2:#fce4ec; }
+
+  html,body{height:100%;margin:0;}
+  body{
+    display:flex;align-items:center;justify-content:center;
+    background:linear-gradient(135deg,var(--bg1),var(--bg2));
+    font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, "Apple Color Emoji", "Segoe UI Emoji", sans-serif;
+    -webkit-font-smoothing:antialiased; overflow:hidden;
+    -webkit-touch-callout: none;
+  }
+
+  .card{
+    width: min(92vw, 360px); min-height:420px; background:#fff;
+    border-radius:28px; padding:28px; box-shadow:0 24px 50px rgba(0,0,0,0.12);
+    text-align:center; display:flex; flex-direction:column; align-items:center; position:relative;
+  }
+
+  h1{
+    font-family: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    font-weight: 900;
+    font-size:22px;
+    color:#333;
+    margin:14px 0 10px;
+    line-height:1.15;
+    text-transform:none !important;
+    letter-spacing:0.2px;
+  }
+
+  .main-gif{
+    width:100%;
+    height:240px;
+    object-fit:cover;
+    border-radius:18px;
+    background:#fff;
+    display:block;
+  }
+
+  #successGif{
+    width:100%;
+    height:260px;
+    object-fit:cover;
+    border-radius:18px;
+    display:block;
+  }
+
+  .btn-container{
+    width:100%; display:flex; justify-content:center; align-items:center;
+    gap:110px; margin-top:18px; height:120px;
+  }
+
+  @media (max-width:420px){
+    .btn-container{ gap:22px; height:100px; }
+  }
+
+  button{
+    border:0; border-radius:20px; cursor:pointer;
+    font-weight: 900;
+    transition:transform .14s ease, box-shadow .14s ease; padding:12px 26px;
+    font-size:16px; user-select:none;
+    font-family: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+  }
+
+  @keyframes pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.08); }
+    100% { transform: scale(1); }
+  }
+
+  #yesBtn{
+    background:linear-gradient(135deg,#ff2d55,#ff5f7e); color:#fff;
+    padding:20px 44px; font-size:22px; box-shadow:0 8px 20px rgba(255,45,85,0.36); z-index:30;
+    animation: pulse 1.5s infinite ease-in-out;
+  }
+  #yesBtn:active{ transform:translateY(1px) scale(.98); }
+
+  #noBtn{
+    background:#f2f2f7; color:#7b7b82; padding:12px 26px; font-size:16px; z-index:20;
+    position:relative;
+    touch-action: none;
+  }
+
+  .hint{
+    position:absolute; bottom:14px; left:50%; transform:translateX(-50%);
+    font-size:12px; color:#8e8e93; font-family:Inter, sans-serif; opacity:0;
+    pointer-events:none; transition:opacity .18s ease;
+  }
+  .hint.visible{ opacity:1; }
+
+  .hidden{ display:none; }
+
+  .success-text{
+    font-family:"Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    color:#ff2d55; font-size:20px; margin-top:14px;
+    text-transform:none; font-weight: 900;
+  }
+
+  .no-fixed{ position:fixed !important; touch-action: none; }
+</style>
+</head>
+<body>
+
+  <div class="card" id="question-screen">
+    <img id="startGif" class="main-gif" src="" alt="Старт">
+    <h1 id="mainTitle">Будешь моей валентинкой? 💌</h1>
+
+    <div class="btn-container">
+      <button id="yesBtn" type="button">Да!</button>
+      <button id="noBtn" type="button">Нет</button>
+    </div>
+
+    <div id="hintText" class="hint" aria-hidden="true">Кажется, «Нет» выглядит немного застенчивой 😈</div>
+  </div>
+
+  <div class="card hidden" id="success-screen" aria-hidden="true">
+    <img id="successGif" src="" alt="Финал">
+    <div class="success-text" id="successText">Ура-а-а! Вы Великолепны!</div>
+  </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  const startImg = document.getElementById('startGif');
+  const successImg = document.getElementById('successGif');
+
+  // Прямые media-ссылки (Tom & Diwali) — если захочешь, можно заменить
+  const startCandidates = [
+    'https://media1.tenor.com/m/ivfq2ZjjX4MAAAAd/tom-and-jerry-tom-and-jerry-love.gif'
+  ];
+
+  const successCandidates = [
+    'https://media1.tenor.com/m/zV3BHt9q-FAAAAAd/diwali.gif'
+  ];
+
+  const fallbackStart = [
+    '/preview.png'
+  ];
+  const fallbackSuccess = [
+    '/preview.png'
+  ];
+
+  function pickFirstWorking(urls, imgElement, fallbacks, onDone) {
+    let i = 0;
+    function tryNext() {
+      if(i >= urls.length) {
+        pickFallback(fallbacks, imgElement, onDone);
+        return;
+      }
+      const url = urls[i++];
+      const tester = new Image();
+      tester.crossOrigin = "anonymous";
+      tester.onload = () => {
+        imgElement.src = url;
+        imgElement.style.display = '';
+        const prev = imgElement.parentNode.querySelector('video.aux-media');
+        if(prev) prev.remove();
+        if(onDone) onDone(true, url);
+      };
+      tester.onerror = () => {
+        if(/\.(mp4|webm)(\?|$)/i.test(url)) {
+          const video = document.createElement('video');
+          video.autoplay = true;
+          video.loop = true;
+          video.muted = true;
+          video.playsInline = true;
+          video.src = url;
+          video.style.width = imgElement.style.width || '100%';
+          video.style.height = imgElement.style.height || '100%';
+          video.style.objectFit = 'cover';
+          video.style.borderRadius = imgElement.style.borderRadius || '18px';
+          imgElement.style.display = 'none';
+          const prevv = imgElement.parentNode.querySelector('video.aux-media');
+          if(prevv) prevv.remove();
+          video.className = 'aux-media';
+          imgElement.parentNode.insertBefore(video, imgElement.nextSibling);
+          if(onDone) onDone(true, url);
+        } else {
+          setTimeout(tryNext, 80);
+        }
+      };
+      tester.src = url;
+    }
+
+    function pickFallback(fbs, imgEl, done) {
+      let j = 0;
+      function tryFb() {
+        if(j >= fbs.length) {
+          if(done) done(false);
+          return;
+        }
+        const u = fbs[j++];
+        const t = new Image();
+        t.crossOrigin = "anonymous";
+        t.onload = () => {
+          imgEl.src = u;
+          imgEl.style.display = '';
+          if(done) done(true, u);
+        };
+        t.onerror = () => setTimeout(tryFb, 50);
+        t.src = u;
+      }
+      tryFb();
+    }
+
+    tryNext();
+  }
+
+  pickFirstWorking(startCandidates, startImg, fallbackStart, (ok, url) => {
+    if(!ok) startImg.alt = 'Старт (изображение недоступно)';
+  });
+  pickFirstWorking(successCandidates, successImg, fallbackSuccess, (ok, url) => {
+    if(!ok) successImg.alt = 'Финал (изображение недоступно)';
+  });
+
+  // --- интерфейс (структуру не менял) ---
+  const noBtn = document.getElementById('noBtn');
+  const yesBtn = document.getElementById('yesBtn');
+  const questionScreen = document.getElementById('question-screen');
+  const successScreen = document.getElementById('success-screen');
+  const hint = document.getElementById('hintText');
+
+  let firstNoInteraction = true;
+  let angle = 0;
+
+  function clamp(v, a, b){ return Math.max(a, Math.min(b, v)); }
+
+  function flyAway() {
+    if(firstNoInteraction){
+      hint.classList.add('visible');
+      hint.setAttribute('aria-hidden','false');
+      firstNoInteraction = false;
+    }
+
+    noBtn.classList.add('no-fixed');
+    noBtn.style.zIndex = 9999;
+
+    angle += (Math.random() * 1.8 + 0.8);
+    const radius = 140 + Math.random() * 220;
+
+    const cx = window.innerWidth / 2;
+    const cy = window.innerHeight / 2;
+
+    const x = cx + Math.cos(angle) * radius;
+    const y = cy + Math.sin(angle) * radius;
+
+    noBtn.style.left = clamp(x, 12, window.innerWidth - noBtn.offsetWidth - 12) + 'px';
+    noBtn.style.top  = clamp(y, 12, window.innerHeight - noBtn.offsetHeight - 12) + 'px';
+    noBtn.style.transform = `rotate(${(Math.random()*30 - 15)}deg)`;
+  }
+
+  function handleNoPointer(ev){
+    if(ev) {
+      try{ ev.preventDefault(); }catch(e){}
+    }
+    flyAway();
+  }
+
+  noBtn.addEventListener('pointerenter', handleNoPointer, {passive:false});
+  noBtn.addEventListener('pointerdown', handleNoPointer, {passive:false});
+  noBtn.addEventListener('mouseenter', handleNoPointer, {passive:false});
+  noBtn.addEventListener('mousedown', handleNoPointer, {passive:false});
+  noBtn.addEventListener('touchstart', handleNoPointer, {passive:false});
+  noBtn.addEventListener('touchmove', (e) => {
+    handleNoPointer(e);
+  }, {passive:false});
+
+  document.addEventListener('touchmove', (e) => {
+    if(!firstNoInteraction) return;
+    const t = e.touches && e.touches[0];
+    if(!t) return;
+    const rect = noBtn.getBoundingClientRect();
+    const pad = 60;
+    if(t.clientX > rect.left - pad && t.clientX < rect.right + pad && t.clientY > rect.top - pad && t.clientY < rect.bottom + pad){
+      handleNoPointer(e);
+    }
+  }, {passive:false});
+
+  yesBtn.addEventListener('click', () => {
+    questionScreen.classList.add('hidden');
+    successScreen.classList.remove('hidden');
+    successScreen.setAttribute('aria-hidden','false');
+
+    confetti({
+      particleCount: 150,
+      spread: 70,
+      origin: { y: 0.6 },
+      colors: ['#ff2d55', '#ffd1dc', '#ffffff']
+    });
+  });
+
+  window.addEventListener('resize', () => {
+    if(noBtn.classList.contains('no-fixed')){
+      noBtn.style.left = clamp(parseFloat(noBtn.style.left || 0), 12, window.innerWidth - noBtn.offsetWidth - 12) + 'px';
+      noBtn.style.top  = clamp(parseFloat(noBtn.style.top  || 0), 12, window.innerHeight - noBtn.offsetHeight - 12) + 'px';
+    }
+  });
+
+});
+</script>
+
+</body>
+</html>
